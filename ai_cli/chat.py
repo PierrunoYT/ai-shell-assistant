@@ -4,7 +4,7 @@ Core chat functionality for AI CLI.
 import json
 import os
 import re
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 
 import openai
 from dotenv import load_dotenv
@@ -60,25 +60,32 @@ class ChatSession:
         """
         return [tool.to_dict() for tool in self.tools.values()]
 
-    def detect_tool_intent(self, message: str) -> Tuple[bool, Optional[Dict[str, Any]]]:
+    def detect_tool_intent(self, message: str) -> Tuple[bool, List[Dict[str, Any]]]:
         """
-        Detect if a message contains an intent to use a tool.
+        Detect if a message contains an intent to use one or more tools.
 
         Args:
             message: The user's message.
 
         Returns:
-            A tuple of (has_tool_intent, tool_call_info).
+            A tuple of (has_tool_intent, list_of_tool_call_info).
         """
         if not self.use_nlu_tool_calling or not self.tools:
-            return False, None
+            return False, []
 
         try:
             # Use OpenAI to detect tool intent
             system_message = """
-            You are a tool intent detector. Your job is to determine if the user's message contains an intent to use a specific tool.
-            If you detect a tool intent, respond with a JSON object containing the tool name and parameters.
-            If you don't detect a tool intent, respond with: {"tool_detected": false}
+            You are a tool intent detector. Your job is to determine if the user's message contains an intent to use one or more tools.
+
+            If you detect a tool intent, respond with a JSON object containing the tool information:
+            - For a single tool: {"tools": [{"tool_name": "name", "parameters": {"param1": "value1"}}]}
+            - For multiple tools: {"tools": [{"tool_name": "name1", "parameters": {...}}, {"tool_name": "name2", "parameters": {...}}]}
+
+            If you don't detect any tool intent, respond with: {"tools": []}
+
+            Important: If the user's request requires multiple steps with different tools, identify ALL the tools needed and include them in the response.
+            For example, if the user wants to create a file and then copy it, include both the create_file and copy_file tools.
 
             Special instructions for path parameters:
             - For file or directory paths, provide just the path without additional words like "directory" or "folder"
@@ -119,24 +126,25 @@ class ChatSession:
                     json_str = json_match.group(0)
                     result = json.loads(json_str)
 
-                    # Check if a tool was detected
-                    if result.get("tool_detected") is False:
-                        return False, None
+                    # Get the list of tools
+                    tools_list = result.get("tools", [])
 
-                    # Extract tool name and parameters
-                    tool_name = result.get("tool_name")
-                    if not tool_name or tool_name not in self.tools:
-                        return False, None
+                    # If no tools were detected, return False
+                    if not tools_list:
+                        return False, []
 
-                    # Get the parameters
-                    params = result.get("parameters", {})
+                    # Process each detected tool
+                    valid_tool_calls = []
+                    for tool_info in tools_list:
+                        tool_name = tool_info.get("tool_name")
+                        params = tool_info.get("parameters", {})
 
-                    # Special handling for search_file tool
-                    if tool_name == "search_file":
-                        # Set default path if not provided
-                        if "path" not in params or not params["path"]:
-                            params["path"] = "."  # Default to current directory
-                        else:
+                        # Skip invalid tools
+                        if not tool_name or tool_name not in self.tools:
+                            continue
+
+                        # Special handling for path parameters in various tools
+                        if "path" in params:
                             # Fix common path issues
                             path = params["path"]
 
@@ -161,20 +169,30 @@ class ChatSession:
                             # Update the path parameter
                             params["path"] = path
 
-                        # Print the path being used (for debugging)
-                        self.console.print(f"[dim]Searching in path: {params['path']}[/dim]")
+                        # Special handling for search_file tool
+                        if tool_name == "search_file":
+                            # Set default path if not provided
+                            if "path" not in params or not params["path"]:
+                                params["path"] = "."  # Default to current directory
 
-                    return True, {
-                        "name": tool_name,
-                        "arguments": params
-                    }
+                            # Print the path being used (for debugging)
+                            self.console.print(f"[dim]Searching in path: {params['path']}[/dim]")
+
+                        # Add the valid tool call
+                        valid_tool_calls.append({
+                            "name": tool_name,
+                            "arguments": params
+                        })
+
+                    # Return the results
+                    return len(valid_tool_calls) > 0, valid_tool_calls
             except (json.JSONDecodeError, AttributeError):
                 pass
 
-            return False, None
+            return False, []
         except Exception as e:
             print_error(f"Error detecting tool intent: {str(e)}")
-            return False, None
+            return False, []
 
     def execute_tool(self, tool_call):
         """
@@ -223,6 +241,44 @@ class ChatSession:
         except Exception as e:
             return f"Error executing tool '{tool_name}': {str(e)}"
 
+    def execute_multiple_tools(self, tool_calls: List[Dict[str, Any]]) -> str:
+        """
+        Execute multiple tool calls in sequence.
+
+        Args:
+            tool_calls: A list of tool call information dictionaries.
+
+        Returns:
+            A combined result of all tool executions.
+        """
+        if not tool_calls:
+            return "No tools to execute."
+
+        results = []
+        tool_names = []
+
+        # Execute each tool and collect results
+        for tool_call in tool_calls:
+            tool_name = tool_call["name"]
+            tool_names.append(tool_name)
+
+            # Execute the tool
+            self.console.print(f"[bold cyan]Executing tool: {tool_name}[/bold cyan]")
+            result = self.execute_tool(tool_call)
+
+            # Add the result
+            results.append(f"Result from {tool_name}:\n{result}")
+
+        # Format the combined message
+        if len(tool_names) == 1:
+            intro = f"I'll use the {tool_names[0]} tool to help with that."
+        else:
+            tool_list = ", ".join(tool_names[:-1]) + f" and {tool_names[-1]}"
+            intro = f"I'll use the {tool_list} tools to help with that."
+
+        combined_results = "\n\n".join(results)
+        return f"{intro}\n\nHere's what I found:\n\n{combined_results}"
+
     def chat(self, message: str) -> str:
         """
         Send a message to the AI and get a response.
@@ -238,29 +294,26 @@ class ChatSession:
 
         # Check for NLU tool intent
         if self.use_nlu_tool_calling and self.tools:
-            has_tool_intent, tool_call_info = self.detect_tool_intent(message)
+            has_tool_intent, tool_calls = self.detect_tool_intent(message)
 
-            if has_tool_intent and tool_call_info:
-                # Execute the tool
-                self.console.print(f"[bold cyan]Detected tool intent: {tool_call_info['name']}[/bold cyan]")
-                tool_result = self.execute_tool(tool_call_info)
+            if has_tool_intent and tool_calls:
+                # Execute the tools
+                tool_names = [tool["name"] for tool in tool_calls]
+                self.console.print(f"[bold cyan]Detected tool intent: {', '.join(tool_names)}[/bold cyan]")
+
+                # Execute all tools and get combined results
+                combined_result = self.execute_multiple_tools(tool_calls)
 
                 # Add the user message to history
                 self.history.append({"role": "user", "content": message})
 
-                # Add a synthetic assistant message about using the tool
+                # Add a synthetic assistant message with the combined results
                 self.history.append({
                     "role": "assistant",
-                    "content": f"I'll use the {tool_call_info['name']} tool to help with that."
+                    "content": combined_result
                 })
 
-                # Add the tool result
-                self.history.append({
-                    "role": "assistant",
-                    "content": f"Here's what I found:\n\n{tool_result}"
-                })
-
-                return f"I'll use the {tool_call_info['name']} tool to help with that.\n\nHere's what I found:\n\n{tool_result}"
+                return combined_result
 
         # Add the user message to history
         self.history.append({"role": "user", "content": message})
