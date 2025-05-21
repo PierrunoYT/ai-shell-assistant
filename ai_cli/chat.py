@@ -79,6 +79,11 @@ class ChatSession:
             You are a tool intent detector. Your job is to determine if the user's message contains an intent to use a specific tool.
             If you detect a tool intent, respond with a JSON object containing the tool name and parameters.
             If you don't detect a tool intent, respond with: {"tool_detected": false}
+
+            Special instructions for path parameters:
+            - For file or directory paths, provide just the path without additional words like "directory" or "folder"
+            - For example, if the user says "search in the ai_cli directory", the path should be just "ai_cli"
+            - If the user mentions a file, include the file extension
             """
 
             # Create a message with available tools
@@ -123,6 +128,17 @@ class ChatSession:
 
                     # Get the parameters
                     params = result.get("parameters", {})
+
+                    # Special handling for search_file tool
+                    if tool_name == "search_file" and "path" in params:
+                        # Fix common path issues
+                        path = params["path"]
+                        # Handle "directory" suffix
+                        path = path.replace(" directory", "")
+                        # Remove quotes if present
+                        path = path.strip('"\'')
+                        # Update the path parameter
+                        params["path"] = path
 
                     return True, {
                         "name": tool_name,
