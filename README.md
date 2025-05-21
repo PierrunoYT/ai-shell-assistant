@@ -2,6 +2,14 @@
 
 AI Shell Assistant is a command-line tool that uses AI to convert natural language into shell commands. It allows you to describe what you want to do in plain English, and the AI will generate and execute the appropriate shell commands for you.
 
+## Warning
+
+**USE AT YOUR OWN RISK**: This tool executes shell commands on your system. While it includes safety measures and requires confirmation before executing any command, there is always a risk when executing automatically generated commands. The authors are not responsible for any damage, data loss, or other negative consequences that may result from using this tool.
+
+- Always carefully review commands before confirming execution
+- Be especially cautious with commands that modify or delete files
+- Consider running in a test environment for unfamiliar operations
+
 ## Features
 
 - **Natural Language to Shell Commands**: Describe tasks in plain English and get the corresponding shell commands
@@ -64,6 +72,13 @@ Set configuration values:
 ```
 python main.py config_set key value
 ```
+
+## Security Considerations
+
+- The tool uses the OpenAI API to generate commands, which means your queries are sent to OpenAI's servers
+- Commands are only executed after explicit user confirmation
+- Consider reviewing the generated commands carefully before execution
+- For sensitive operations, verify the command's correctness independently
 
 ## License
 
