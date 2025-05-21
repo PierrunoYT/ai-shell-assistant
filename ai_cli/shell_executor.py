@@ -29,24 +29,25 @@ class ShellExecutor:
         """Initialize the shell executor."""
         self.history = []
         self.system_info = self._get_system_info()
-        
+
         # Set the OpenAI API key
         api_key = os.getenv("OPENAI_API_KEY") or config.get("api_key")
         if api_key:
             openai.api_key = api_key
-            
+
         # Model information
         self.model_info = {
-            "gpt-4o": "GPT-4o - Latest and most capable model with improved reasoning",
+            "gpt-4.1": "GPT-4.1 - Flagship model with major improvements in coding, instruction following, and long context",
+            "gpt-4o": "GPT-4o - Versatile multimodal model with text, image, and audio capabilities",
             "gpt-4": "GPT-4 - Advanced reasoning and instruction following",
-            "gpt-4-turbo": "GPT-4 Turbo - Faster version of GPT-4 with similar capabilities",
+            "gpt-4-turbo": "GPT-4 Turbo - Older high-intelligence model, consider using GPT-4o instead",
             "gpt-3.5-turbo": "GPT-3.5 Turbo - Faster and more economical model"
         }
 
     def _get_system_info(self) -> Dict[str, str]:
         """
         Get information about the current system.
-        
+
         Returns:
             A dictionary containing system information.
         """
@@ -55,7 +56,7 @@ class ShellExecutor:
             "cwd": os.getcwd(),
             "shell": os.environ.get("SHELL", ""),
         }
-        
+
         # Add more detailed OS info
         if system_info["os"] == "Windows":
             system_info["os_version"] = platform.version()
@@ -70,31 +71,31 @@ class ShellExecutor:
                 system_info["os_version"] = platform.version()
         elif system_info["os"] == "Darwin":
             system_info["os_version"] = f"macOS {platform.mac_ver()[0]}"
-        
+
         return system_info
 
     def generate_command(self, user_input: str) -> Tuple[str, str]:
         """
         Generate a shell command from natural language input.
-        
+
         Args:
             user_input: The natural language description of what to do.
-            
+
         Returns:
             A tuple containing the generated command and its explanation.
         """
         if not openai.api_key:
             raise ValueError("OpenAI API key not set")
-        
+
         # Create a system message that guides the AI to generate safe and appropriate commands
         system_message = f"""
         You are a command-line assistant that converts natural language into shell commands.
-        
+
         Current system information:
         - Operating System: {self.system_info['os']} {self.system_info.get('os_version', '')}
         - Current Working Directory: {self.system_info['cwd']}
         - Shell: {self.system_info['shell']}
-        
+
         Guidelines for generating commands:
         1. Generate commands that are safe to execute
         2. NEVER generate commands that could cause data loss without explicit confirmation
@@ -105,15 +106,15 @@ class ShellExecutor:
         7. For destructive operations (delete, remove, etc.), include safeguards
         8. Adapt commands to the user's operating system
         9. For complex tasks, break down into multiple commands with explanations
-        
+
         Your response should be in this format:
         ```
         <command>
         ```
-        
+
         <explanation>
         """
-        
+
         try:
             response = openai.chat.completions.create(
                 model=config.get("model", "gpt-3.5-turbo"),
@@ -124,13 +125,13 @@ class ShellExecutor:
                 max_tokens=500,
                 temperature=0.2
             )
-            
+
             content = response.choices[0].message.content
-            
+
             # Extract the command and explanation
             command = ""
             explanation = content
-            
+
             # Look for the command between ``` markers
             import re
             command_match = re.search(r'```(?:bash|shell|sh)?\n(.*?)\n```', content, re.DOTALL)
@@ -138,9 +139,9 @@ class ShellExecutor:
                 command = command_match.group(1).strip()
                 # Remove the command block from the explanation
                 explanation = re.sub(r'```(?:bash|shell|sh)?\n.*?\n```', '', content, flags=re.DOTALL).strip()
-            
+
             return command, explanation
-            
+
         except Exception as e:
             print_error(f"Error generating command: {str(e)}")
             return "", f"Error: {str(e)}"
@@ -148,10 +149,10 @@ class ShellExecutor:
     def execute_command(self, command: str) -> str:
         """
         Execute a shell command and return its output.
-        
+
         Args:
             command: The shell command to execute.
-            
+
         Returns:
             The output of the command.
         """
@@ -164,7 +165,7 @@ class ShellExecutor:
                 text=True,
                 cwd=self.system_info["cwd"]
             )
-            
+
             # Prepare the output
             output = ""
             if result.stdout:
@@ -173,52 +174,52 @@ class ShellExecutor:
                 if output:
                     output += "\n"
                 output += f"Error: {result.stderr}"
-            
+
             # Add exit code information
             output += f"\nExit code: {result.returncode}"
-            
+
             return output
-        
+
         except Exception as e:
             return f"Error executing command: {str(e)}"
 
     def process_input(self, user_input: str) -> str:
         """
         Process natural language input, generate a command, and execute it after confirmation.
-        
+
         Args:
             user_input: The natural language description of what to do.
-            
+
         Returns:
             The result of the command execution.
         """
         # Generate the command
         command, explanation = self.generate_command(user_input)
-        
+
         if not command:
             return "Sorry, I couldn't generate a command from your input."
-        
+
         # Display the command and explanation
         console.print("\n[bold cyan]Generated Command:[/bold cyan]")
         console.print(Panel(Syntax(command, "bash", theme="monokai", line_numbers=False)))
-        
+
         console.print("\n[bold cyan]Explanation:[/bold cyan]")
         print_markdown(explanation)
-        
+
         # Display model information
         current_model = config.get("model", "gpt-4o")
         model_description = self.model_info.get(current_model, "Custom model")
         console.print(f"\n[dim]Generated using {model_description}[/dim]")
-        
+
         # Ask for confirmation
         if Confirm.ask("\nDo you want to execute this command?"):
             console.print("\n[bold yellow]Executing command...[/bold yellow]")
             result = self.execute_command(command)
-            
+
             # Display the result
             console.print("\n[bold cyan]Command Output:[/bold cyan]")
             console.print(Panel(result))
-            
+
             return f"Command executed: {command}\n\n{result}"
         else:
             return "Command execution cancelled."
