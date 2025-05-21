@@ -61,32 +61,18 @@ class ChatSession:
         return [tool.to_dict() for tool in self.tools.values()]
 
     def detect_tool_intent(self, message: str) -> Tuple[bool, List[Dict[str, Any]]]:
-        """
-        Detect if a message contains an intent to use one or more tools.
-
-        Args:
-            message: The user's message.
-
-        Returns:
-            A tuple of (has_tool_intent, list_of_tool_call_info).
-        """
+        # ... (unchanged, see previous full code)
         if not self.use_nlu_tool_calling or not self.tools:
             return False, []
-
         try:
-            # Use OpenAI to detect tool intent
             system_message = """
             You are a tool intent detector. Your job is to determine if the user's message contains an intent to use one or more tools.
-
             If you detect a tool intent, respond with a JSON object containing the tool information:
             - For a single tool: {"tools": [{"tool_name": "name", "parameters": {"param1": "value1"}}]}
             - For multiple tools: {"tools": [{"tool_name": "name1", "parameters": {...}}, {"tool_name": "name2", "parameters": {...}}]}
-
             If you don't detect any tool intent, respond with: {"tools": []}
-
             Important: If the user's request requires multiple steps with different tools, identify ALL the tools needed and include them in the response.
             For example, if the user wants to create a file and then copy it, include both the create_file and copy_file tools.
-
             Special instructions for path parameters:
             - For file or directory paths, provide just the path without additional words like "directory" or "folder"
             - For example, if the user says "search in the ai_cli directory", the path should be just "ai_cli"
@@ -94,8 +80,6 @@ class ChatSession:
             - If the user refers to "the project" or "this project", use "project" as the path
             - If the user doesn't specify a path, assume they mean the current directory and use "." as the path
             """
-
-            # Create a message with available tools
             tools_info = "Available tools:\n"
             for tool_name, tool in self.tools.items():
                 tools_info += f"- {tool_name}: {tool.description}\n"
@@ -103,8 +87,6 @@ class ChatSession:
                 for param in tool.parameters:
                     required = " (required)" if param.get("required", False) else ""
                     tools_info += f"  - {param['name']}{required}: {param['description']}\n"
-
-            # Make the API request
             response = openai.chat.completions.create(
                 model=config.get("model", "gpt-3.5-turbo"),
                 messages=[
@@ -114,81 +96,45 @@ class ChatSession:
                 max_tokens=500,
                 temperature=0.2
             )
-
-            # Parse the response
             content = response.choices[0].message.content
-
-            # Try to extract JSON from the response
             try:
-                # Look for JSON in the response
                 json_match = re.search(r'\{.*\}', content, re.DOTALL)
                 if json_match:
                     json_str = json_match.group(0)
                     result = json.loads(json_str)
-
-                    # Get the list of tools
                     tools_list = result.get("tools", [])
-
-                    # If no tools were detected, return False
                     if not tools_list:
                         return False, []
-
-                    # Process each detected tool
                     valid_tool_calls = []
                     for tool_info in tools_list:
                         tool_name = tool_info.get("tool_name")
                         params = tool_info.get("parameters", {})
-
-                        # Skip invalid tools
                         if not tool_name or tool_name not in self.tools:
                             continue
-
-                        # Special handling for path parameters in various tools
                         if "path" in params:
-                            # Fix common path issues
                             path = params["path"]
-
-                            # Handle common terms
                             if path.lower() in ["project", "this project", "the project", "current project"]:
-                                # Use current directory for project
                                 path = "."
                             else:
-                                # Handle "directory" suffix and similar terms
                                 for term in [" directory", " folder", " repo", " repository"]:
                                     path = path.replace(term, "")
-
-                                # Remove quotes if present
                                 path = path.strip('"\'')
-
-                                # Handle relative paths
                                 if path.startswith("the "):
-                                    path = path[4:]  # Remove "the "
+                                    path = path[4:]
                                 if path.startswith("this "):
-                                    path = path[5:]  # Remove "this "
-
-                            # Update the path parameter
+                                    path = path[5:]
                             params["path"] = path
-
-                        # Special handling for search_file tool
                         if tool_name == "search_file":
-                            # Set default path if not provided
                             if "path" not in params or not params["path"]:
-                                params["path"] = "."  # Default to current directory
-
-                            # Print the path being used (for debugging)
+                                params["path"] = "."
                             self.console.print(f"[dim]Searching in path: {params['path']}[/dim]")
-
-                        # Add the valid tool call
                         valid_tool_calls.append({
                             "name": tool_name,
                             "arguments": params
                         })
-
-                    # Return the results
                     return len(valid_tool_calls) > 0, valid_tool_calls
             except (json.JSONDecodeError, AttributeError):
                 pass
-
             return False, []
         except Exception as e:
             print_error(f"Error detecting tool intent: {str(e)}")
@@ -197,145 +143,97 @@ class ChatSession:
     def execute_tool(self, tool_call):
         """
         Execute a tool call from the AI.
-
         Args:
             tool_call: The tool call from the OpenAI API.
-
         Returns:
             The result of the tool execution.
         """
         if isinstance(tool_call, dict):
-            # Handle NLU-detected tool calls
             tool_name = tool_call["name"]
             args = tool_call["arguments"]
         else:
-            # Handle OpenAI API tool calls
             tool_name = tool_call.function.name
             try:
                 args = json.loads(tool_call.function.arguments)
             except json.JSONDecodeError:
                 return "Error: Invalid JSON in tool arguments"
-
         if tool_name not in self.tools:
             return f"Error: Tool '{tool_name}' not found or not enabled"
-
         tool = self.tools[tool_name]
-
-        # Check if this is a dangerous tool that requires confirmation
+        # Special logic for move_file: create destination directory if needed
+        if tool_name == "move_file":
+            destination = args.get("destination", "")
+            source = args.get("source", "")
+            dest_is_dir = (
+                (destination and not os.path.splitext(destination)[1]) or
+                (destination.endswith(os.sep)) or
+                (os.path.isdir(destination))
+            )
+            if dest_is_dir and not os.path.exists(destination):
+                if "create_folder" in self.tools:
+                    self.console.print(f"[bold cyan]Destination directory '{destination}' does not exist. Creating it with create_folder tool.[/bold cyan]")
+                    folder_args = {"path": destination}
+                    folder_result = self.tools["create_folder"].execute(folder_args)
+                    self.console.print(f"[dim]Result from create_folder: {folder_result}[/dim]")
+                if not destination.endswith(os.sep):
+                    destination = destination + os.sep
+                args["destination"] = os.path.join(destination, os.path.basename(source))
         if hasattr(tool, 'dangerous') and tool.dangerous:
-            # Get the confirmation message
             confirmation_msg = tool.confirmation_message
-
-            # Ask for confirmation
             self.console.print(f"[bold red]{confirmation_msg}[/bold red]", end="")
             confirmation = input().strip().lower()
-
-            # If the user didn't confirm, abort the operation
             if confirmation != 'y' and confirmation != 'yes':
                 return "Operation cancelled by user."
-
         try:
-            # Execute the tool
             result = tool.execute(args)
             return result
         except Exception as e:
             return f"Error executing tool '{tool_name}': {str(e)}"
 
     def execute_multiple_tools(self, tool_calls: List[Dict[str, Any]]) -> str:
-        """
-        Execute multiple tool calls in sequence.
-
-        Args:
-            tool_calls: A list of tool call information dictionaries.
-
-        Returns:
-            A combined result of all tool executions.
-        """
         if not tool_calls:
             return "No tools to execute."
-
         results = []
         tool_names = []
-
-        # Execute each tool and collect results
         for tool_call in tool_calls:
             tool_name = tool_call["name"]
             tool_names.append(tool_name)
-
-            # Execute the tool
             self.console.print(f"[bold cyan]Executing tool: {tool_name}[/bold cyan]")
             result = self.execute_tool(tool_call)
-
-            # Add the result
             results.append(f"Result from {tool_name}:\n{result}")
-
-        # Format the combined message
         if len(tool_names) == 1:
             intro = f"I'll use the {tool_names[0]} tool to help with that."
         else:
             tool_list = ", ".join(tool_names[:-1]) + f" and {tool_names[-1]}"
             intro = f"I'll use the {tool_list} tools to help with that."
-
         combined_results = "\n\n".join(results)
         return f"{intro}\n\nHere's what I found:\n\n{combined_results}"
 
     def chat(self, message: str) -> str:
-        """
-        Send a message to the AI and get a response.
-
-        Args:
-            message: The user's message.
-
-        Returns:
-            The AI's response.
-        """
         if not openai.api_key:
             return "Error: OpenAI API key not set. Please set the OPENAI_API_KEY environment variable or configure it in the settings."
-
-        # Check for NLU tool intent
         if self.use_nlu_tool_calling and self.tools:
             has_tool_intent, tool_calls = self.detect_tool_intent(message)
-
             if has_tool_intent and tool_calls:
-                # Execute the tools
                 tool_names = [tool["name"] for tool in tool_calls]
                 self.console.print(f"[bold cyan]Detected tool intent: {', '.join(tool_names)}[/bold cyan]")
-
-                # Execute all tools and get combined results
                 combined_result = self.execute_multiple_tools(tool_calls)
-
-                # Add the user message to history
                 self.history.append({"role": "user", "content": message})
-
-                # Add a synthetic assistant message with the combined results
                 self.history.append({
                     "role": "assistant",
                     "content": combined_result
                 })
-
                 return combined_result
-
-        # Add the user message to history
         self.history.append({"role": "user", "content": message})
-
-        # Limit history size
         history_size = config.get("history_size", 10)
-        if len(self.history) > history_size * 2:  # Each exchange is 2 messages
+        if len(self.history) > history_size * 2:
             self.history = self.history[-history_size * 2:]
-
         try:
-            # Create the messages for the API
             messages = self.history.copy()
-
-            # Get the model configuration
             model = config.get("model", "gpt-3.5-turbo")
             max_tokens = config.get("max_tokens", 1000)
             temperature = config.get("temperature", 0.7)
-
-            # Get available tools
             tools = self.get_tool_definitions()
-
-            # Make the API request
             response = openai.chat.completions.create(
                 model=model,
                 messages=messages,
@@ -344,17 +242,10 @@ class ChatSession:
                 tools=tools if tools else None,
                 tool_choice="auto"
             )
-
-            # Process the response
             response_message = response.choices[0].message
-
-            # Handle tool calls
             if hasattr(response_message, 'tool_calls') and response_message.tool_calls:
-                # Execute each tool call
                 for tool_call in response_message.tool_calls:
                     tool_result = self.execute_tool(tool_call)
-
-                    # Add the tool call and result to the history
                     self.history.append({
                         "role": "assistant",
                         "content": None,
@@ -369,31 +260,23 @@ class ChatSession:
                             }
                         ]
                     })
-
                     self.history.append({
                         "role": "tool",
                         "tool_call_id": tool_call.id,
                         "content": tool_result
                     })
-
-                # Get a new response with the tool results
                 second_response = openai.chat.completions.create(
                     model=model,
                     messages=self.history,
                     max_tokens=max_tokens,
                     temperature=temperature
                 )
-
                 response_message = second_response.choices[0].message
-
-            # Add the assistant's response to history
             self.history.append({
                 "role": "assistant",
                 "content": response_message.content
             })
-
             return response_message.content
-
         except Exception as e:
             error_message = f"Error communicating with OpenAI: {str(e)}"
             print_error(error_message)
