@@ -6,7 +6,8 @@ A command-line interface for AI chat with extensible tools.
 
 - Interactive chat with AI powered by OpenAI's GPT models
 - Extensible tool system for adding new capabilities
-- Built-in tools for calculations and weather information
+- Natural Language Understanding (NLU) for tool calling
+- Built-in search file tool for finding content in files
 - Configuration management for customizing behavior
 
 ## Installation
@@ -26,7 +27,7 @@ A command-line interface for AI chat with extensible tools.
    ```
    export OPENAI_API_KEY=your_api_key_here
    ```
-   
+
    Or add it to a `.env` file in the project root:
    ```
    OPENAI_API_KEY=your_api_key_here
@@ -52,7 +53,7 @@ Set configuration values:
 python main.py config-set api_key your_api_key_here
 python main.py config-set model gpt-4
 python main.py config-set temperature 0.7
-python main.py config-set enabled_tools calculator,weather
+python main.py config-set enabled_tools search_file
 ```
 
 View configuration:
@@ -66,6 +67,24 @@ python main.py config-get model
 List all available tools:
 ```
 python main.py tools
+```
+
+## Natural Language Tool Calling
+
+The AI CLI supports natural language understanding (NLU) for tool calling. This means you can use natural language to invoke tools instead of explicit commands. For example:
+
+```
+[You]: Can you search for "config" in the ai_cli directory?
+[AI]: I'll use the search_file tool to help with that.
+
+Here's what I found:
+...
+```
+
+You can enable or disable NLU tool calling in the configuration:
+
+```
+python main.py config-set use_nlu_tool_calling true
 ```
 
 ## Adding New Tools
@@ -86,7 +105,7 @@ from ai_cli.tools.base import BaseTool
 class MyNewTool(BaseTool):
     name = "my_tool"
     description = "Description of what my tool does"
-    
+
     @property
     def parameters(self) -> List[Dict[str, Any]]:
         return [
@@ -97,7 +116,7 @@ class MyNewTool(BaseTool):
                 "required": True
             }
         ]
-    
+
     def execute(self, args: Dict[str, Any]) -> str:
         param1 = args.get("param1", "")
         # Tool implementation here
