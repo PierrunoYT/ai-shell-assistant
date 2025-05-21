@@ -201,9 +201,24 @@ class ChatSession:
         if tool_name not in self.tools:
             return f"Error: Tool '{tool_name}' not found or not enabled"
 
+        tool = self.tools[tool_name]
+
+        # Check if this is a dangerous tool that requires confirmation
+        if hasattr(tool, 'dangerous') and tool.dangerous:
+            # Get the confirmation message
+            confirmation_msg = tool.confirmation_message
+
+            # Ask for confirmation
+            self.console.print(f"[bold red]{confirmation_msg}[/bold red]", end="")
+            confirmation = input().strip().lower()
+
+            # If the user didn't confirm, abort the operation
+            if confirmation != 'y' and confirmation != 'yes':
+                return "Operation cancelled by user."
+
         try:
             # Execute the tool
-            result = self.tools[tool_name].execute(args)
+            result = tool.execute(args)
             return result
         except Exception as e:
             return f"Error executing tool '{tool_name}': {str(e)}"

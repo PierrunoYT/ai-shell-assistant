@@ -5,15 +5,20 @@ import os
 import shutil
 from typing import Any, Dict, List, Optional
 
-from ai_cli.tools.base import BaseTool
+from ai_cli.tools.dangerous import DangerousTool
 
 
-class RemoveFileTool(BaseTool):
+class RemoveFileTool(DangerousTool):
     """A tool to remove files or directories."""
-    
+
     name = "remove"
     description = "Remove a file or directory from the filesystem"
-    
+
+    @property
+    def confirmation_message(self) -> str:
+        """Get the confirmation message for the remove tool."""
+        return "Warning: You are about to permanently delete files or directories. This action cannot be undone. Continue? (y/n): "
+
     @property
     def parameters(self) -> List[Dict[str, Any]]:
         """Get the parameters for the remove tool."""
@@ -37,27 +42,27 @@ class RemoveFileTool(BaseTool):
                 "required": False
             }
         ]
-    
+
     def execute(self, args: Dict[str, Any]) -> str:
         """
         Execute the remove tool.
-        
+
         Args:
             args: A dictionary containing the remove parameters.
-            
+
         Returns:
             The result of the remove operation as a string.
         """
         path = args.get("path", "")
         recursive = args.get("recursive", False)
         force = args.get("force", False)
-        
+
         if not path:
             return "Error: No path provided"
-        
+
         if not os.path.exists(path):
             return f"Error: Path '{path}' does not exist"
-        
+
         try:
             if os.path.isfile(path):
                 # Remove a file
