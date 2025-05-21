@@ -17,6 +17,11 @@ class ChatSession:
         self.tools = self._load_tools()
         self.console = Console()
         self.use_nlu_tool_calling = config.get("use_nlu_tool_calling", True)
+        
+        # Set the OpenAI API key
+        api_key = os.getenv("OPENAI_API_KEY") or config.get("api_key")
+        if api_key:
+            openai.api_key = api_key
 
     def _load_tools(self):
         """
@@ -203,8 +208,14 @@ class ChatSession:
         return f"{intro}\n\nHere's what I found:\n\n{combined_results}"
 
     def chat(self, message: str) -> str:
+        # Check if API key is set
         if not openai.api_key:
-            return "Error: OpenAI API key not set. Please set the OPENAI_API_KEY environment variable or configure it in the settings."
+            api_key = os.getenv("OPENAI_API_KEY") or config.get("api_key")
+            if api_key:
+                openai.api_key = api_key
+            else:
+                return "Error: OpenAI API key not set. Please set the OPENAI_API_KEY environment variable or configure it in the settings."
+        
         if self.use_nlu_tool_calling and self.tools:
             has_tool_intent, tool_calls = self.detect_tool_intent(message)
             if has_tool_intent and tool_calls:
