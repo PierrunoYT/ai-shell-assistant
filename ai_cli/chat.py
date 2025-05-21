@@ -1,25 +1,12 @@
-"""
-Core chat functionality for AI CLI.
-"""
-import json
 import os
 import re
-from typing import Any, Dict, List, Tuple, Union
-
-import openai
-from dotenv import load_dotenv
-from rich.console import Console
-
-from ai_cli.config import config
+import json
+from typing import Any, Dict, List, Tuple
+from ai_cli.utils.helpers import print_tool_message, print_ai_message
+from ai_cli import config
 from ai_cli.tools import AVAILABLE_TOOLS
-from ai_cli.utils.helpers import print_error, print_markdown, print_success
-
-# Load environment variables
-load_dotenv()
-
-# Set up OpenAI API key
-openai.api_key = os.getenv("OPENAI_API_KEY") or config.get("api_key")
-
+import openai
+from rich.console import Console
 
 class ChatSession:
     """A chat session with the AI."""
@@ -47,6 +34,7 @@ class ChatSession:
                     tool_class = AVAILABLE_TOOLS[tool_name]
                     tools[tool_name] = tool_class()
                 except Exception as e:
+                    from ai_cli.utils.helpers import print_error
                     print_error(f"Failed to load tool '{tool_name}': {str(e)}")
 
         return tools
@@ -137,6 +125,7 @@ class ChatSession:
                 pass
             return False, []
         except Exception as e:
+            from ai_cli.utils.helpers import print_error
             print_error(f"Error detecting tool intent: {str(e)}")
             return False, []
 
@@ -186,8 +175,11 @@ class ChatSession:
                 return "Operation cancelled by user."
         try:
             result = tool.execute(args)
+            print_tool_message(result, tool_name)
             return result
         except Exception as e:
+            from ai_cli.utils.helpers import print_error
+            print_error(f"Error executing tool '{tool_name}': {str(e)}")
             return f"Error executing tool '{tool_name}': {str(e)}"
 
     def execute_multiple_tools(self, tool_calls: List[Dict[str, Any]]) -> str:
@@ -207,6 +199,7 @@ class ChatSession:
             tool_list = ", ".join(tool_names[:-1]) + f" and {tool_names[-1]}"
             intro = f"I'll use the {tool_list} tools to help with that."
         combined_results = "\n\n".join(results)
+        print_tool_message(f"{intro}\n\nHere's what I found:\n\n{combined_results}", "Tools")
         return f"{intro}\n\nHere's what I found:\n\n{combined_results}"
 
     def chat(self, message: str) -> str:
@@ -223,6 +216,7 @@ class ChatSession:
                     "role": "assistant",
                     "content": combined_result
                 })
+                print_ai_message(combined_result)
                 return combined_result
         self.history.append({"role": "user", "content": message})
         history_size = config.get("history_size", 10)
@@ -276,8 +270,10 @@ class ChatSession:
                 "role": "assistant",
                 "content": response_message.content
             })
+            print_ai_message(response_message.content)
             return response_message.content
         except Exception as e:
+            from ai_cli.utils.helpers import print_error
             error_message = f"Error communicating with OpenAI: {str(e)}"
             print_error(error_message)
             return error_message

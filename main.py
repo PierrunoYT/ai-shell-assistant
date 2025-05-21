@@ -1,26 +1,12 @@
-#!/usr/bin/env python3
-"""
-AI CLI - A command-line interface for AI chat with extensible tools.
-"""
 import os
-import sys
 from typing import Optional
-
 import click
-from dotenv import load_dotenv
-from rich.console import Console
-from rich.markdown import Markdown
-
 from ai_cli.chat import ChatSession
+from ai_cli.utils.helpers import (
+    print_markdown, print_success, print_error, print_user_message, print_ai_message, print_tool_message, print_header
+)
 from ai_cli.config import config
 from ai_cli.tools import AVAILABLE_TOOLS
-from ai_cli.utils.helpers import print_error, print_markdown, print_success
-
-# Load environment variables
-load_dotenv()
-
-console = Console()
-
 
 @click.group()
 def cli():
@@ -51,14 +37,14 @@ def chat(model: Optional[str], temperature: Optional[float], max_tokens: Optiona
     # Create chat session
     session = ChatSession()
     
-    print_success("AI CLI Chat Session")
-    print_markdown("Type your messages and press Enter. Type 'exit' or 'quit' to end the session.")
+    print_header("AI CLI Chat Session", "Type your messages and press Enter. Type 'exit' or 'quit' to end the session.")
     
     # Main chat loop
     while True:
         try:
             # Get user input
-            user_input = input("\n[You]: ")
+            print_user_message("Type your message (or 'exit' to quit):")
+            user_input = input("[You] > ")
             
             # Check for exit command
             if user_input.lower() in ["exit", "quit", "q"]:
@@ -69,8 +55,7 @@ def chat(model: Optional[str], temperature: Optional[float], max_tokens: Optiona
             response = session.chat(user_input)
             
             # Print the response
-            print("\n[AI]:")
-            print_markdown(response)
+            print_ai_message(response)
             
         except KeyboardInterrupt:
             print_success("\nGoodbye!")
