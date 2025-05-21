@@ -100,12 +100,15 @@ class ShellExecutor:
         1. Generate commands that are safe to execute
         2. NEVER generate commands that could cause data loss without explicit confirmation
         3. NEVER generate commands that could harm the system
-        4. Provide a clear explanation of what the command does
-        5. If multiple commands are needed, use appropriate operators (&&, ||, ;)
-        6. If the request is ambiguous, generate the safest interpretation
-        7. For destructive operations (delete, remove, etc.), include safeguards
-        8. Adapt commands to the user's operating system
-        9. For complex tasks, break down into multiple commands with explanations
+        4. Be EXPLICIT and SPECIFIC - show the exact command that will run
+        5. Provide a clear explanation of what the command does and why each option is used
+        6. If multiple commands are needed, use appropriate operators (&&, ||, ;)
+        7. If the request is ambiguous, generate the safest interpretation
+        8. For destructive operations (delete, remove, etc.), include safeguards like -i for interactive mode
+        9. Adapt commands to the user's operating system
+        10. For complex tasks, break down into multiple commands with explanations
+        11. Always include the full path or relative path when working with files
+        12. For commands that might affect many files (like rm), show exactly what will be affected
 
         Your response should be in this format:
         ```
@@ -200,8 +203,8 @@ class ShellExecutor:
             return "Sorry, I couldn't generate a command from your input."
 
         # Display the command and explanation
-        console.print("\n[bold cyan]Generated Command:[/bold cyan]")
-        console.print(Panel(Syntax(command, "bash", theme="monokai", line_numbers=False)))
+        console.print("\n[bold red]Command to Execute:[/bold red]")
+        console.print(Panel(Syntax(command, "bash", theme="monokai", line_numbers=False), border_style="red"))
 
         console.print("\n[bold cyan]Explanation:[/bold cyan]")
         print_markdown(explanation)
@@ -211,14 +214,18 @@ class ShellExecutor:
         model_description = self.model_info.get(current_model, "Custom model")
         console.print(f"\n[dim]Generated using {model_description}[/dim]")
 
+        # Display warning for potentially dangerous commands
+        if any(keyword in command.lower() for keyword in ["rm ", "rmdir", "del ", "delete", "format", "drop"]):
+            console.print("\n[bold red]⚠️ WARNING: This command may delete or modify files or data. Please review carefully![/bold red]")
+
         # Ask for confirmation
-        if Confirm.ask("\nDo you want to execute this command?"):
-            console.print("\n[bold yellow]Executing command...[/bold yellow]")
+        if Confirm.ask("\n[bold yellow]Do you want to execute this command?[/bold yellow]"):
+            console.print("\n[bold yellow]Executing command:[/bold yellow] " + command)
             result = self.execute_command(command)
 
             # Display the result
-            console.print("\n[bold cyan]Command Output:[/bold cyan]")
-            console.print(Panel(result))
+            console.print("\n[bold green]Command Output:[/bold green]")
+            console.print(Panel(result, border_style="green"))
 
             return f"Command executed: {command}\n\n{result}"
         else:
