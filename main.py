@@ -54,8 +54,8 @@ def chat(model: Optional[str], temperature: Optional[float], max_tokens: Optiona
             # Send message to AI
             response = session.chat(user_input)
             
-            # Print the response
-            print_ai_message(response)
+            # The response is already printed in the chat method, so we don't need to print it again here
+            # print_ai_message(response)
             
         except KeyboardInterrupt:
             print_success("\nGoodbye!")
