@@ -3,7 +3,7 @@ import re
 import json
 from typing import Any, Dict, List, Tuple
 from ai_cli.utils.helpers import print_tool_message, print_ai_message
-from ai_cli import config
+from ai_cli.config import config
 from ai_cli.tools import AVAILABLE_TOOLS
 import openai
 from rich.console import Console

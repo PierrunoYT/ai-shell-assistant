@@ -5,7 +5,7 @@ import os
 import shutil
 from typing import Any, Dict, List
 
-from ai_cli.tools.base import DangerousTool
+from ai_cli.tools.dangerous import DangerousTool
 
 
 class MoveFileTool(DangerousTool):
