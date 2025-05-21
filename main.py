@@ -7,6 +7,7 @@ from ai_cli.utils.helpers import (
 )
 from ai_cli.config import config
 from ai_cli.tools import AVAILABLE_TOOLS
+from ai_cli.shell_executor import ShellExecutor  # Add import for ShellExecutor
 
 @click.group()
 def cli():
@@ -143,6 +144,62 @@ def tools():
             print()  # Empty line between tools
         except Exception as e:
             print_error(f"Error loading tool '{name}': {str(e)}")
+
+
+@cli.command()
+@click.option("--model", help="The OpenAI model to use")
+@click.option("--temperature", type=float, help="The temperature for the model")
+def shell(model: Optional[str], temperature: Optional[float]):
+    """Start an interactive shell command generator session."""
+    # Update config if options are provided
+    if model:
+        config.set("model", model)
+    if temperature is not None:
+        config.set("temperature", temperature)
+    
+    # Check for API key
+    api_key = os.getenv("OPENAI_API_KEY") or config.get("api_key")
+    if not api_key:
+        print_error("OpenAI API key not set. Please set the OPENAI_API_KEY environment variable or configure it with 'ai-cli config set api_key YOUR_API_KEY'")
+        return
+    
+    # Create shell executor
+    executor = ShellExecutor()
+    
+    print_header("AI Shell Command Generator", "Describe what you want to do in natural language, and AI will generate shell commands for you.")
+    print_markdown("Type 'exit' or 'quit' to end the session. Type 'cd <directory>' to change the working directory.")
+    
+    # Main shell loop
+    while True:
+        try:
+            # Get user input
+            print_user_message("What would you like to do? (or 'exit' to quit):")
+            user_input = input("[You] > ")
+            
+            # Check for exit command
+            if user_input.lower() in ["exit", "quit", "q"]:
+                print_success("Goodbye!")
+                break
+            
+            # Check for cd command to change directory
+            if user_input.lower().startswith("cd "):
+                try:
+                    directory = user_input[3:].strip()
+                    os.chdir(directory)
+                    executor.system_info["cwd"] = os.getcwd()
+                    print_success(f"Changed directory to: {os.getcwd()}")
+                except Exception as e:
+                    print_error(f"Error changing directory: {str(e)}")
+                continue
+            
+            # Process the input
+            result = executor.process_input(user_input)
+            
+        except KeyboardInterrupt:
+            print_success("\nGoodbye!")
+            break
+        except Exception as e:
+            print_error(f"An error occurred: {str(e)}")
 
 
 if __name__ == "__main__":
