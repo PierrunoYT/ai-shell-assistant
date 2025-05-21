@@ -84,6 +84,8 @@ class ChatSession:
             - For file or directory paths, provide just the path without additional words like "directory" or "folder"
             - For example, if the user says "search in the ai_cli directory", the path should be just "ai_cli"
             - If the user mentions a file, include the file extension
+            - If the user refers to "the project" or "this project", use "project" as the path
+            - If the user doesn't specify a path, assume they mean the current directory and use "." as the path
             """
 
             # Create a message with available tools
@@ -130,15 +132,37 @@ class ChatSession:
                     params = result.get("parameters", {})
 
                     # Special handling for search_file tool
-                    if tool_name == "search_file" and "path" in params:
-                        # Fix common path issues
-                        path = params["path"]
-                        # Handle "directory" suffix
-                        path = path.replace(" directory", "")
-                        # Remove quotes if present
-                        path = path.strip('"\'')
-                        # Update the path parameter
-                        params["path"] = path
+                    if tool_name == "search_file":
+                        # Set default path if not provided
+                        if "path" not in params or not params["path"]:
+                            params["path"] = "."  # Default to current directory
+                        else:
+                            # Fix common path issues
+                            path = params["path"]
+
+                            # Handle common terms
+                            if path.lower() in ["project", "this project", "the project", "current project"]:
+                                # Use current directory for project
+                                path = "."
+                            else:
+                                # Handle "directory" suffix and similar terms
+                                for term in [" directory", " folder", " repo", " repository"]:
+                                    path = path.replace(term, "")
+
+                                # Remove quotes if present
+                                path = path.strip('"\'')
+
+                                # Handle relative paths
+                                if path.startswith("the "):
+                                    path = path[4:]  # Remove "the "
+                                if path.startswith("this "):
+                                    path = path[5:]  # Remove "this "
+
+                            # Update the path parameter
+                            params["path"] = path
+
+                        # Print the path being used (for debugging)
+                        self.console.print(f"[dim]Searching in path: {params['path']}[/dim]")
 
                     return True, {
                         "name": tool_name,
