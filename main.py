@@ -16,7 +16,9 @@ def cli():
 
 
 @cli.command()
-@click.option("--model", help="The OpenAI model to use")
+@click.option("--model", help="The OpenAI model to use",
+              type=click.Choice(["gpt-4o", "gpt-4", "gpt-3.5-turbo", "gpt-4-turbo"]), 
+              default=None)
 @click.option("--temperature", type=float, help="The temperature for the model")
 @click.option("--max-tokens", type=int, help="The maximum number of tokens to generate")
 def chat(model: Optional[str], temperature: Optional[float], max_tokens: Optional[int]):
@@ -39,6 +41,7 @@ def chat(model: Optional[str], temperature: Optional[float], max_tokens: Optiona
     session = ChatSession()
     
     print_header("AI CLI Chat Session", "Type your messages and press Enter. Type 'exit' or 'quit' to end the session.")
+    print_markdown(f"Using model: **{config.get('model')}**")
     
     # Main chat loop
     while True:
@@ -147,7 +150,9 @@ def tools():
 
 
 @cli.command()
-@click.option("--model", help="The OpenAI model to use")
+@click.option("--model", help="The OpenAI model to use", 
+              type=click.Choice(["gpt-4o", "gpt-4", "gpt-3.5-turbo", "gpt-4-turbo"]), 
+              default=None)
 @click.option("--temperature", type=float, help="The temperature for the model")
 def shell(model: Optional[str], temperature: Optional[float]):
     """Start an interactive shell command generator session."""
@@ -167,6 +172,7 @@ def shell(model: Optional[str], temperature: Optional[float]):
     executor = ShellExecutor()
     
     print_header("AI Shell Command Generator", "Describe what you want to do in natural language, and AI will generate shell commands for you.")
+    print_markdown(f"Using model: **{config.get('model')}**")
     print_markdown("Type 'exit' or 'quit' to end the session. Type 'cd <directory>' to change the working directory.")
     
     # Main shell loop

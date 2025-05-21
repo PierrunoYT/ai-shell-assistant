@@ -9,7 +9,7 @@ from ai_cli.utils.helpers import load_config, save_config
 # Default configuration
 DEFAULT_CONFIG = {
     "api_key": "",
-    "model": "gpt-3.5-turbo",
+    "model": "gpt-4o",  # Updated to use GPT-4o as default
     "max_tokens": 1000,
     "temperature": 0.7,
     "enabled_tools": [],  # Changed from list of tools to empty list to disable all tools

@@ -34,6 +34,14 @@ class ShellExecutor:
         api_key = os.getenv("OPENAI_API_KEY") or config.get("api_key")
         if api_key:
             openai.api_key = api_key
+            
+        # Model information
+        self.model_info = {
+            "gpt-4o": "GPT-4o - Latest and most capable model with improved reasoning",
+            "gpt-4": "GPT-4 - Advanced reasoning and instruction following",
+            "gpt-4-turbo": "GPT-4 Turbo - Faster version of GPT-4 with similar capabilities",
+            "gpt-3.5-turbo": "GPT-3.5 Turbo - Faster and more economical model"
+        }
 
     def _get_system_info(self) -> Dict[str, str]:
         """
@@ -196,6 +204,11 @@ class ShellExecutor:
         
         console.print("\n[bold cyan]Explanation:[/bold cyan]")
         print_markdown(explanation)
+        
+        # Display model information
+        current_model = config.get("model", "gpt-4o")
+        model_description = self.model_info.get(current_model, "Custom model")
+        console.print(f"\n[dim]Generated using {model_description}[/dim]")
         
         # Ask for confirmation
         if Confirm.ask("\nDo you want to execute this command?"):
