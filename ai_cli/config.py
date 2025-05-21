@@ -12,7 +12,7 @@ DEFAULT_CONFIG = {
     "model": "gpt-3.5-turbo",
     "max_tokens": 1000,
     "temperature": 0.7,
-    "enabled_tools": ["search_file", "rename", "remove"],
+    "enabled_tools": ["search_file", "rename", "remove", "create_file"],
     "history_size": 10,
     "use_nlu_tool_calling": True
 }
