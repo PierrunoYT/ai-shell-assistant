@@ -18,6 +18,16 @@ AI Shell Assistant is a command-line tool that uses AI to convert natural langua
 - **Cross-Platform**: Works on Windows, macOS, and Linux
 - **Interactive Chat**: Full AI chat capabilities for general assistance
 - **Rich Terminal UI**: Colorful and informative terminal interface
+- **Multiple AI Models**: Support for the latest OpenAI models including GPT-4o
+
+## Supported AI Models
+
+AI Shell Assistant supports multiple OpenAI models:
+
+- **GPT-4o** (default): Latest and most capable model with improved reasoning
+- **GPT-4**: Advanced reasoning and instruction following
+- **GPT-4-turbo**: Faster version of GPT-4 with similar capabilities
+- **GPT-3.5-turbo**: Faster and more economical model
 
 ## Installation
 
@@ -47,6 +57,11 @@ Generate shell commands from natural language descriptions:
 python main.py shell
 ```
 
+With specific model:
+```
+python main.py shell --model gpt-4
+```
+
 Example interactions:
 - "List all Python files in the current directory"
 - "Find all files modified in the last 7 days"
@@ -61,6 +76,11 @@ Start an interactive chat session with the AI:
 python main.py chat
 ```
 
+With specific model and parameters:
+```
+python main.py chat --model gpt-3.5-turbo --temperature 0.8
+```
+
 ### Configuration
 
 View current configuration:
@@ -71,6 +91,13 @@ python main.py config_get
 Set configuration values:
 ```
 python main.py config_set key value
+```
+
+Example configurations:
+```
+python main.py config_set model gpt-4o
+python main.py config_set temperature 0.7
+python main.py config_set max_tokens 2000
 ```
 
 ## Security Considerations
