@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2024-01-XX
+
+### Added
+- Interactive setup wizard with `ai-cli init` command for easy configuration
+- Rich formatting throughout the CLI with styled prompts and colored output
+- Progress indicators and spinner animations for long-running operations
+- Auto-execute mode for shell commands with `--auto-execute` flag
+- System prompt support for chat sessions with `--system` or `-s` option
+- Short option flags for common parameters (`-m` for model, `-t` for temperature)
+- Welcome screen when running `ai-cli` without arguments
+- Version information with `--version` flag
+- Enhanced security features:
+  - Password-protected input for API keys
+  - API key masking in configuration display
+  - Confirmation prompts with rich styling
+- New helper functions: `print_info()`, `print_warning()`, `create_progress_bar()`, `prompt_user()`, `confirm_action()`
+- Current directory display in shell mode prompts
+- Tool enable/disable status display in tools list
+- Command aliases for better readability (`config-set`, `config-get`)
+
+### Changed
+- Improved command help text with usage examples
+- Enhanced user prompts with rich styling and colors
+- Better error messages and warnings
+- More informative status displays showing model, temperature, and enabled tools
+- Modernized CLI interface with emoji icons and better formatting
+- Configuration commands now use hyphens (config-set, config-get) instead of underscores
+
+### Fixed
+- Better handling of API key configuration
+- Improved error handling in shell executor
+
 ## [0.1.0] - 2024-01-XX
 
 ### Added
