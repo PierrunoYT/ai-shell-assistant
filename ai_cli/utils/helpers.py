@@ -10,6 +10,8 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.text import Text
 from rich import box
+from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
+from rich.prompt import Prompt, Confirm
 
 console = Console()
 
@@ -162,3 +164,77 @@ def print_header(title: str, subtitle: Optional[str] = None) -> None:
         padding=(1, 2)
     )
     console.print(panel)
+
+
+def print_info(message: str) -> None:
+    """
+    Print an info message in a blue panel.
+    Args:
+        message: The info message to print.
+    """
+    panel = Panel(
+        Text(f"ℹ️  {message}", style="bold blue"),
+        title="Info",
+        border_style="blue",
+        box=box.ROUNDED,
+        padding=(1, 2)
+    )
+    console.print(panel)
+
+
+def print_warning(message: str) -> None:
+    """
+    Print a warning message in a yellow panel.
+    Args:
+        message: The warning message to print.
+    """
+    panel = Panel(
+        Text(f"⚠️  {message}", style="bold yellow"),
+        title="Warning",
+        border_style="yellow",
+        box=box.ROUNDED,
+        padding=(1, 2)
+    )
+    console.print(panel)
+
+
+def create_progress_bar(description: str = "Processing...") -> Progress:
+    """
+    Create a progress bar for long-running operations.
+    Args:
+        description: Description of the operation.
+    Returns:
+        A Progress object that can be used as a context manager.
+    """
+    return Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+        console=console
+    )
+
+
+def prompt_user(message: str, default: Optional[str] = None, password: bool = False) -> str:
+    """
+    Prompt the user for input with rich formatting.
+    Args:
+        message: The prompt message.
+        default: Default value if user presses Enter.
+        password: Whether to hide the input (for passwords).
+    Returns:
+        The user's input.
+    """
+    return Prompt.ask(message, default=default, password=password, console=console)
+
+
+def confirm_action(message: str, default: bool = False) -> bool:
+    """
+    Ask the user to confirm an action.
+    Args:
+        message: The confirmation message.
+        default: Default response if user presses Enter.
+    Returns:
+        True if confirmed, False otherwise.
+    """
+    return Confirm.ask(message, default=default, console=console)

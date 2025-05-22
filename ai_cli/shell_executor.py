@@ -29,6 +29,7 @@ class ShellExecutor:
         """Initialize the shell executor."""
         self.history = []
         self.system_info = self._get_system_info()
+        self.auto_execute = False
 
         # Set the OpenAI API key
         api_key = os.getenv("OPENAI_API_KEY") or config.get("api_key")
@@ -218,8 +219,12 @@ class ShellExecutor:
         if any(keyword in command.lower() for keyword in ["rm ", "rmdir", "del ", "delete", "format", "drop"]):
             console.print("\n[bold red]⚠️ WARNING: This command may delete or modify files or data. Please review carefully![/bold red]")
 
-        # Ask for confirmation
-        if Confirm.ask("\n[bold yellow]Do you want to execute this command?[/bold yellow]"):
+        # Ask for confirmation or auto-execute
+        should_execute = self.auto_execute or Confirm.ask("\n[bold yellow]Do you want to execute this command?[/bold yellow]")
+        
+        if should_execute:
+            if self.auto_execute:
+                console.print("\n[bold yellow]Auto-executing command...[/bold yellow]")
             console.print("\n[bold yellow]Executing command:[/bold yellow] " + command)
             result = self.execute_command(command)
 
