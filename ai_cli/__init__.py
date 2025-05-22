@@ -5,7 +5,7 @@ A powerful command-line interface that uses AI to convert natural language
 into shell commands and provides extensible tools for file operations.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __author__ = "PierrunoYT"
 __email__ = "pierrebruno@hotmail.ch"
 __description__ = "AI-powered command-line interface with extensible tools"
