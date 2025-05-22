@@ -111,6 +111,7 @@ venv.bak/
 
 # Project specific
 ~/.ai_cli/
+RELEASE_NOTES.md
 
 # PyPI packaging
 MANIFEST
