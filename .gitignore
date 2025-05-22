@@ -111,3 +111,22 @@ venv.bak/
 
 # Project specific
 ~/.ai_cli/
+
+# PyPI packaging
+MANIFEST
+share/python-wheels/
+*.py,cover
+.nox/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+cython_debug/
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini

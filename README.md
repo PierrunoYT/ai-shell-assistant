@@ -32,20 +32,44 @@ AI Shell Assistant supports multiple OpenAI models:
 
 ## Installation
 
+### From PyPI (Recommended)
+
+Install the package directly from PyPI:
+
+```bash
+pip install ai-shell-assistant
+```
+
+### From Source
+
 1. Clone this repository:
-   ```
+   ```bash
    git clone https://github.com/PierrunoYT/ai-shell-assistant.git
    cd ai-shell-assistant
    ```
 
-2. Install the required dependencies:
-   ```
-   pip install -r requirements.txt
+2. Install the package in development mode:
+   ```bash
+   pip install -e .
    ```
 
-3. Create a `.env` file with your OpenAI API key:
+   Or install with development dependencies:
+   ```bash
+   pip install -e ".[dev]"
    ```
-   OPENAI_API_KEY=your_openai_api_key_here
+
+### Configuration
+
+Set your OpenAI API key either as an environment variable or through the CLI:
+
+1. **Environment Variable** (recommended):
+   ```bash
+   export OPENAI_API_KEY=your_openai_api_key_here
+   ```
+
+2. **Using the CLI**:
+   ```bash
+   ai-cli config_set api_key your_openai_api_key_here
    ```
 
 ## Usage
@@ -54,13 +78,13 @@ AI Shell Assistant supports multiple OpenAI models:
 
 Generate shell commands from natural language descriptions:
 
-```
-python main.py shell
+```bash
+ai-cli shell
 ```
 
 With specific model:
-```
-python main.py shell --model gpt-4.1
+```bash
+ai-cli shell --model gpt-4.1
 ```
 
 Example interactions:
@@ -73,33 +97,40 @@ Example interactions:
 
 Start an interactive chat session with the AI:
 
-```
-python main.py chat
+```bash
+ai-cli chat
 ```
 
 With specific model and parameters:
-```
-python main.py chat --model gpt-4.1 --temperature 0.8
+```bash
+ai-cli chat --model gpt-4.1 --temperature 0.8
 ```
 
 ### Configuration
 
 View current configuration:
-```
-python main.py config_get
+```bash
+ai-cli config_get
 ```
 
 Set configuration values:
-```
-python main.py config_set key value
+```bash
+ai-cli config_set key value
 ```
 
 Example configurations:
+```bash
+ai-cli config_set model gpt-4.1
+ai-cli config_set model gpt-4o
+ai-cli config_set temperature 0.7
+ai-cli config_set max_tokens 2000
 ```
-python main.py config_set model gpt-4.1
-python main.py config_set model gpt-4o
-python main.py config_set temperature 0.7
-python main.py config_set max_tokens 2000
+
+### Available Tools
+
+List all available tools:
+```bash
+ai-cli tools
 ```
 
 ## Security Considerations
