@@ -2,13 +2,25 @@
 
 AI Shell Assistant is a command-line tool that uses AI to convert natural language into shell commands. It allows you to describe what you want to do in plain English, and the AI will generate and execute the appropriate shell commands for you.
 
-## Warning
+## ⚠️ WARNING ⚠️
 
-**USE AT YOUR OWN RISK**: This tool executes shell commands on your system. While it includes safety measures and requires confirmation before executing any command, there is always a risk when executing automatically generated commands. The authors are not responsible for any damage, data loss, or other negative consequences that may result from using this tool.
+> ### **USE AT YOUR OWN RISK**
+> 
+> **This tool executes shell commands on your system.** While it includes safety measures and requires confirmation before executing any command, there is always a risk when executing automatically generated commands. **The authors are not responsible for any damage, data loss, or other negative consequences that may result from using this tool.**
 
-- Always carefully review commands before confirming execution
-- Be especially cautious with commands that modify or delete files
-- Consider running in a test environment for unfamiliar operations
+<div align="center">
+
+```
+⚠️ PROCEED WITH CAUTION ⚠️
+```
+
+</div>
+
+### Safety Guidelines:
+
+* **📋 REVIEW:** Always carefully review commands before confirming execution
+* **🗑️ CAUTION:** Be especially cautious with commands that modify or delete files
+* **🧪 TEST:** Consider running in a test environment for unfamiliar operations
 
 ## Features
 
